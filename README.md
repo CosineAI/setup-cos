@@ -37,10 +37,9 @@ jobs:
 
 ### Inputs
 
-| Input          | Description                                                        | Required | Default                 |
-| -------------- | ------------------------------------------------------------------ | -------- | ----------------------- |
-| `version`      | Version to install. Use `latest` or a specific tag like `v0.1.0`.  | No       | `latest`                |
-| `api-base-url` | Base URL for the Cosine API (used for nightly version resolution). | No       | `https://api.cosine.sh` |
+| Input     | Description                                                       | Required | Default  |
+| --------- | ----------------------------------------------------------------- | -------- | -------- |
+| `version` | Version to install. Use `latest` or a specific tag like `v0.1.0`. | No       | `latest` |
 
 ### Outputs
 

@@ -9,10 +9,6 @@ inputs:
     description: 'Version of the Cosine CLI to install. Use "latest" (default) for the latest release, or a specific version like "v0.1.0".'
     required: false
     default: 'latest'
-  api-base-url:
-    description: 'Base URL for the Cosine API (used for nightly version resolution).'
-    required: false
-    default: 'https://api.cosine.sh'
 
 outputs:
   version:
