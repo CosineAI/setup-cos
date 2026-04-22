@@ -32,7 +32,9 @@ jest.mock("fs", () => ({
   chmodSync: jest.fn(),
 }));
 
-const tc = jest.requireMock("@actions/tool-cache") as typeof import("@actions/tool-cache");
+const tc = jest.requireMock(
+  "@actions/tool-cache",
+) as typeof import("@actions/tool-cache");
 const mockFind = tc.find as jest.Mock;
 const mockDownloadTool = tc.downloadTool as jest.Mock;
 const mockExtractZip = tc.extractZip as jest.Mock;
