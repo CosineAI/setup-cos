@@ -38,9 +38,7 @@ const mockDownloadTool = tc.downloadTool as jest.Mock;
 const mockExtractZip = tc.extractZip as jest.Mock;
 const mockCacheDir = tc.cacheDir as jest.Mock;
 
-const exec = jest.requireMock(
-  "@actions/exec",
-) as typeof import("@actions/exec");
+const exec = jest.requireMock("@actions/exec") as typeof import("@actions/exec");
 const mockExec = exec.exec as jest.Mock;
 
 describe("run - cache behavior", () => {
@@ -200,7 +198,6 @@ describe("run - cos execution", () => {
     });
     mockDownloadTool.mockResolvedValue("/download/path");
     mockExtractZip.mockResolvedValue("/extracted/path");
-    core.getBooleanInput.mockReturnValue(false);
   });
 
   it("fails when mode is set but prompt is missing", async () => {
@@ -213,7 +210,7 @@ describe("run - cos execution", () => {
     await run();
 
     expect(core.setFailed).toHaveBeenCalledWith(
-      "'prompt' input is required when 'mode' is set",
+      "prompt input is required when mode is set",
     );
     expect(mockExec).not.toHaveBeenCalled();
   });
@@ -342,15 +339,7 @@ describe("run - cos execution", () => {
 
     expect(mockExec).toHaveBeenCalledWith(
       "/extracted/path/cos",
-      [
-        "start",
-        "--mode",
-        "auto",
-        "--prompt",
-        "Test prompt",
-        "--cwd",
-        "/custom/dir",
-      ],
+      ["start", "--mode", "auto", "--prompt", "Test prompt", "--cwd", "/custom/dir"],
       { cwd: "/custom/dir" },
     );
   });
