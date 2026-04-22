@@ -1,4 +1,4 @@
-import { isNightly, resolveVersion } from "../main";
+import { isNightly, resolveVersion, resolveLatestVersion, run } from "../main";
 
 // Mock @actions/core
 jest.mock("@actions/core", () => ({
@@ -18,6 +18,25 @@ jest.mock("@actions/http-client", () => ({
     getJson: mockGetJson,
   })),
 }));
+
+// Mock @actions/tool-cache
+jest.mock("@actions/tool-cache", () => ({
+  find: jest.fn(),
+  downloadTool: jest.fn(),
+  extractZip: jest.fn(),
+  cacheDir: jest.fn(),
+}));
+
+// Mock fs
+jest.mock("fs", () => ({
+  chmodSync: jest.fn(),
+}));
+
+const tc = jest.requireMock("@actions/tool-cache") as typeof import("@actions/tool-cache");
+const mockFind = tc.find as jest.Mock;
+const mockDownloadTool = tc.downloadTool as jest.Mock;
+const mockExtractZip = tc.extractZip as jest.Mock;
+const mockCacheDir = tc.cacheDir as jest.Mock;
 
 describe("isNightly", () => {
   it("returns true for nightly versions", () => {
@@ -107,5 +126,165 @@ describe("resolveVersion", () => {
     const result = await resolveVersion("nightly", "https://api.cosine.sh");
 
     expect(result).toBe("latest");
+  });
+});
+
+describe("resolveLatestVersion", () => {
+  beforeEach(() => {
+    mockGetJson.mockClear();
+  });
+
+  it("resolves latest version from GitHub API", async () => {
+    mockGetJson.mockResolvedValue({
+      result: { tag_name: "v1.0.0" },
+      statusCode: 200,
+    });
+
+    const result = await resolveLatestVersion();
+
+    expect(result).toBe("v1.0.0");
+    expect(mockGetJson).toHaveBeenCalledWith(
+      "https://api.github.com/repos/CosineAI/cli2/releases/latest",
+    );
+  });
+
+  it("falls back to latest when API request fails", async () => {
+    mockGetJson.mockRejectedValue(new Error("Network timeout"));
+
+    const result = await resolveLatestVersion();
+
+    expect(result).toBe("latest");
+    expect(mockGetJson).toHaveBeenCalledWith(
+      "https://api.github.com/repos/CosineAI/cli2/releases/latest",
+    );
+  });
+
+  it("falls back to latest when API returns empty result", async () => {
+    mockGetJson.mockResolvedValue({
+      result: null,
+      statusCode: 200,
+    });
+
+    const result = await resolveLatestVersion();
+
+    expect(result).toBe("latest");
+  });
+});
+
+// Import run separately to avoid hoisting issues with the mocks
+// We'll import it here and test it with mocks already in place
+describe("run - cache behavior", () => {
+  const core = require("@actions/core");
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    Object.defineProperty(process, "platform", {
+      value: "linux",
+      configurable: true,
+    });
+    Object.defineProperty(process, "arch", {
+      value: "x64",
+      configurable: true,
+    });
+  });
+
+  it("calls tc.find with resolved tag when version is latest and cache hits", async () => {
+    mockGetJson.mockResolvedValue({
+      result: { tag_name: "v1.2.3" },
+      statusCode: 200,
+    });
+    mockFind.mockReturnValue("/cached/path");
+    core.getInput.mockImplementation((name: string) => {
+      if (name === "version") return "latest";
+      if (name === "api-base-url") return "https://api.cosine.sh";
+      return "";
+    });
+
+    await run();
+
+    expect(mockFind).toHaveBeenCalledWith("cos", "v1.2.3", "linux-x64");
+  });
+
+  it("calls tc.find with resolved tag when version is latest and cache misses", async () => {
+    mockGetJson.mockResolvedValue({
+      result: { tag_name: "v1.2.3" },
+      statusCode: 200,
+    });
+    mockFind.mockReturnValue("");
+    mockDownloadTool.mockResolvedValue("/download/path");
+    mockExtractZip.mockResolvedValue("/extracted/path");
+    mockCacheDir.mockResolvedValue("/cached/path");
+    core.getInput.mockImplementation((name: string) => {
+      if (name === "version") return "latest";
+      if (name === "api-base-url") return "https://api.cosine.sh";
+      return "";
+    });
+
+    await run();
+
+    expect(mockFind).toHaveBeenCalledWith("cos", "v1.2.3", "linux-x64");
+    expect(mockCacheDir).toHaveBeenCalledWith(
+      "/extracted/path",
+      "cos",
+      "v1.2.3",
+      "linux-x64",
+    );
+  });
+
+  it("falls back to latest and calls tc.find with latest when API fails", async () => {
+    mockGetJson.mockRejectedValue(new Error("Network timeout"));
+    mockFind.mockReturnValue("");
+    mockDownloadTool.mockResolvedValue("/download/path");
+    mockExtractZip.mockResolvedValue("/extracted/path");
+    mockCacheDir.mockResolvedValue("/cached/path");
+    core.getInput.mockImplementation((name: string) => {
+      if (name === "version") return "latest";
+      if (name === "api-base-url") return "https://api.cosine.sh";
+      return "";
+    });
+
+    await run();
+
+    expect(mockFind).toHaveBeenCalledWith("cos", "latest", "linux-x64");
+  });
+
+  it("calls tc.find with specific tag when version is explicit", async () => {
+    mockFind.mockReturnValue("/cached/path");
+    core.getInput.mockImplementation((name: string) => {
+      if (name === "version") return "v1.0.0";
+      if (name === "api-base-url") return "https://api.cosine.sh";
+      return "";
+    });
+
+    await run();
+
+    expect(mockFind).toHaveBeenCalledWith("cos", "v1.0.0", "linux-x64");
+    expect(mockGetJson).not.toHaveBeenCalled();
+  });
+
+  it("calls tc.find with resolved nightly version when version is nightly", async () => {
+    mockGetJson
+      .mockResolvedValueOnce({
+        result: { version: "v1.2.3-nightly.abc123" },
+        statusCode: 200,
+      })
+      .mockResolvedValueOnce({
+        result: { tag_name: "v1.2.3-nightly.abc123" },
+        statusCode: 200,
+      });
+    mockFind.mockReturnValue("/cached/path");
+    core.getInput.mockImplementation((name: string) => {
+      if (name === "version") return "nightly";
+      if (name === "api-base-url") return "https://api.cosine.sh";
+      return "";
+    });
+
+    await run();
+
+    expect(mockFind).toHaveBeenCalledWith(
+      "cos",
+      "v1.2.3-nightly.abc123",
+      "linux-x64",
+    );
   });
 });

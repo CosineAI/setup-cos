@@ -9,6 +9,23 @@ const GITHUB_OWNER = "CosineAI";
 const GITHUB_REPO = "cli2";
 const TOOL_NAME = "cos";
 
+export async function resolveLatestVersion(): Promise<string> {
+  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
+  const client = new httpm.HttpClient("setup-cos");
+  try {
+    const response = await client.getJson<{ tag_name: string }>(url);
+    if (response.result && response.result.tag_name) {
+      core.info(`Resolved latest version to ${response.result.tag_name}`);
+      return response.result.tag_name;
+    }
+  } catch (error) {
+    core.warning(
+      `Failed to resolve latest version from GitHub API: ${error instanceof Error ? error.message : String(error)}. Falling back to "latest".`,
+    );
+  }
+  return "latest";
+}
+
 function getAssetName(): string {
   const platform = process.platform;
   const arch = process.arch;
@@ -75,7 +92,7 @@ function getPlatformArch(): string {
   return `${process.platform}-${process.arch}`;
 }
 
-async function run(): Promise<void> {
+export async function run(): Promise<void> {
   try {
     const versionInput = core.getInput("version") || "latest";
     const apiBaseUrl = core.getInput("api-base-url");
@@ -83,7 +100,14 @@ async function run(): Promise<void> {
     core.debug(`Input version: ${versionInput}`);
     core.debug(`Input api-base-url: ${apiBaseUrl}`);
 
-    const resolvedVersion = await resolveVersion(versionInput, apiBaseUrl);
+    let resolvedVersion: string;
+    if (versionInput === "latest") {
+      resolvedVersion = await resolveLatestVersion();
+    } else if (isNightly(versionInput)) {
+      resolvedVersion = await resolveVersion(versionInput, apiBaseUrl);
+    } else {
+      resolvedVersion = versionInput;
+    }
     core.info(`Resolved version: ${resolvedVersion}`);
 
     const platformArch = getPlatformArch();

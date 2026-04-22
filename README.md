@@ -21,7 +21,7 @@ jobs:
 
       - name: Setup Cosine CLI
         id: setup-cos
-        uses: CosineAI/setup-cos@v1
+        uses: cosineai/setup-cos@v1
         with:
           version: latest
 
