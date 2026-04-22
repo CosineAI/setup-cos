@@ -48,23 +48,9 @@ describe("run - cache behavior", () => {
     });
   });
 
-  it("calls tc.find with 'latest' when version is latest and cache hits", async () => {
-    mockFind.mockReturnValue("/cached/path");
-    core.getInput.mockImplementation((name: string) => {
-      if (name === "version") return "latest";
-      return "";
-    });
-
-    await run();
-
-    expect(mockFind).toHaveBeenCalledWith("cos", "latest", "linux-x64");
-  });
-
-  it("calls tc.find with 'latest' when version is latest and cache misses", async () => {
-    mockFind.mockReturnValue("");
+  it("skips tool cache for 'latest' (non-semver)", async () => {
     mockDownloadTool.mockResolvedValue("/download/path");
     mockExtractZip.mockResolvedValue("/extracted/path");
-    mockCacheDir.mockResolvedValue("/cached/path");
     core.getInput.mockImplementation((name: string) => {
       if (name === "version") return "latest";
       return "";
@@ -72,17 +58,17 @@ describe("run - cache behavior", () => {
 
     await run();
 
-    expect(mockFind).toHaveBeenCalledWith("cos", "latest", "linux-x64");
-    expect(mockCacheDir).toHaveBeenCalledWith(
-      "/extracted/path",
-      "cos",
-      "latest",
-      "linux-x64",
+    expect(mockFind).not.toHaveBeenCalled();
+    expect(mockCacheDir).not.toHaveBeenCalled();
+    expect(mockDownloadTool).toHaveBeenCalledWith(
+      "https://github.com/CosineAI/cli2/releases/download/latest/cos-linux-amd64-glibc2.35.zip",
     );
+    expect(core.addPath).toHaveBeenCalledWith("/extracted/path");
   });
 
-  it("calls tc.find with 'nightly' when version is nightly", async () => {
-    mockFind.mockReturnValue("/cached/path");
+  it("skips tool cache for 'nightly' (non-semver)", async () => {
+    mockDownloadTool.mockResolvedValue("/download/path");
+    mockExtractZip.mockResolvedValue("/extracted/path");
     core.getInput.mockImplementation((name: string) => {
       if (name === "version") return "nightly";
       return "";
@@ -90,10 +76,15 @@ describe("run - cache behavior", () => {
 
     await run();
 
-    expect(mockFind).toHaveBeenCalledWith("cos", "nightly", "linux-x64");
+    expect(mockFind).not.toHaveBeenCalled();
+    expect(mockCacheDir).not.toHaveBeenCalled();
+    expect(mockDownloadTool).toHaveBeenCalledWith(
+      "https://github.com/CosineAI/cli2/releases/download/nightly/cos-linux-amd64-glibc2.35.zip",
+    );
+    expect(core.addPath).toHaveBeenCalledWith("/extracted/path");
   });
 
-  it("calls tc.find with specific tag when version is explicit", async () => {
+  it("uses tool cache for semver version (cache hit)", async () => {
     mockFind.mockReturnValue("/cached/path");
     core.getInput.mockImplementation((name: string) => {
       if (name === "version") return "v1.0.0";
@@ -103,6 +94,31 @@ describe("run - cache behavior", () => {
     await run();
 
     expect(mockFind).toHaveBeenCalledWith("cos", "v1.0.0", "linux-x64");
+    expect(mockDownloadTool).not.toHaveBeenCalled();
+    expect(mockCacheDir).not.toHaveBeenCalled();
+    expect(core.addPath).toHaveBeenCalledWith("/cached/path");
+  });
+
+  it("uses tool cache for semver version (cache miss)", async () => {
+    mockFind.mockReturnValue("");
+    mockDownloadTool.mockResolvedValue("/download/path");
+    mockExtractZip.mockResolvedValue("/extracted/path");
+    mockCacheDir.mockResolvedValue("/cached/path");
+    core.getInput.mockImplementation((name: string) => {
+      if (name === "version") return "v1.0.0";
+      return "";
+    });
+
+    await run();
+
+    expect(mockFind).toHaveBeenCalledWith("cos", "v1.0.0", "linux-x64");
+    expect(mockCacheDir).toHaveBeenCalledWith(
+      "/extracted/path",
+      "cos",
+      "v1.0.0",
+      "linux-x64",
+    );
+    expect(core.addPath).toHaveBeenCalledWith("/cached/path");
   });
 
   it("downloads from correct URL with explicit version", async () => {
@@ -123,10 +139,8 @@ describe("run - cache behavior", () => {
   });
 
   it("downloads from correct URL with 'latest' version", async () => {
-    mockFind.mockReturnValue("");
     mockDownloadTool.mockResolvedValue("/download/path");
     mockExtractZip.mockResolvedValue("/extracted/path");
-    mockCacheDir.mockResolvedValue("/cached/path");
     core.getInput.mockImplementation((name: string) => {
       if (name === "version") return "latest";
       return "";
@@ -140,10 +154,8 @@ describe("run - cache behavior", () => {
   });
 
   it("downloads from correct URL with 'nightly' version", async () => {
-    mockFind.mockReturnValue("");
     mockDownloadTool.mockResolvedValue("/download/path");
     mockExtractZip.mockResolvedValue("/extracted/path");
-    mockCacheDir.mockResolvedValue("/cached/path");
     core.getInput.mockImplementation((name: string) => {
       if (name === "version") return "nightly";
       return "";

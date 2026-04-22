@@ -3,10 +3,15 @@ import * as tc from "@actions/tool-cache";
 import * as path from "path";
 import * as fs from "fs";
 import * as os from "os";
+import * as semver from "semver";
 
 const GITHUB_OWNER = "CosineAI";
 const GITHUB_REPO = "cli2";
 const TOOL_NAME = "cos";
+
+function isSemver(version: string): boolean {
+  return semver.valid(version) !== null;
+}
 
 function getAssetName(): string {
   const platform = process.platform;
@@ -53,6 +58,25 @@ export async function run(): Promise<void> {
     core.info(`Resolved version: ${resolvedVersion}`);
 
     const platformArch = getPlatformArch();
+
+    if (!isSemver(resolvedVersion)) {
+      core.info(
+        `Version "${resolvedVersion}" is not a semver — skipping tool cache`,
+      );
+      const assetName = getAssetName();
+      const downloadUrl = getDownloadUrl(resolvedVersion, assetName);
+      const downloadPath = await tc.downloadTool(downloadUrl);
+      const extractDir = path.join(os.tmpdir(), `cos-extract-${Date.now()}`);
+      const extractedPath = await tc.extractZip(downloadPath, extractDir);
+      const cosBinaryPath = path.join(extractedPath, TOOL_NAME);
+      fs.chmodSync(cosBinaryPath, 0o755);
+      core.addPath(extractedPath);
+      core.setOutput("version", resolvedVersion);
+      core.setOutput("path", cosBinaryPath);
+      core.info("Setup Cosine CLI completed successfully.");
+      return;
+    }
+
     let cachedPath = tc.find(TOOL_NAME, resolvedVersion, platformArch);
 
     if (cachedPath) {
