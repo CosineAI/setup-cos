@@ -1,0 +1,9 @@
+node_modules/
+*.log
+.env
+.env.local
+coverage/
+.DS_Store
+*.tsbuildinfo
+dist/*.map
+dist/licenses.txt

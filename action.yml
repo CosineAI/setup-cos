@@ -1,0 +1,25 @@
+name: 'Setup Cosine CLI'
+description: 'Install the Cosine CLI (cos) for use in GitHub Actions workflows'
+branding:
+  icon: 'terminal'
+  color: 'purple'
+
+inputs:
+  version:
+    description: 'Version of the Cosine CLI to install. Use "latest" (default) for the latest release, or a specific version like "v0.1.0".'
+    required: false
+    default: 'latest'
+  api-base-url:
+    description: 'Base URL for the Cosine API (used for nightly version resolution).'
+    required: false
+    default: 'https://api.cosine.sh'
+
+outputs:
+  version:
+    description: 'The resolved version string that was installed'
+  path:
+    description: 'Absolute path to the installed cos binary'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
