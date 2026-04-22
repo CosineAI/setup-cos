@@ -28301,23 +28301,29 @@ async function run() {
         core.debug(`Input api-base-url: ${apiBaseUrl}`);
         const resolvedVersion = await resolveVersion(versionInput, apiBaseUrl);
         core.info(`Resolved version: ${resolvedVersion}`);
-        const assetName = getAssetName();
-        core.info(`Asset name: ${assetName}`);
-        const downloadUrl = getDownloadUrl(resolvedVersion, assetName);
-        core.info(`Download URL: ${downloadUrl}`);
-        core.info(`Downloading ${assetName}...`);
-        const downloadPath = await tc.downloadTool(downloadUrl);
-        core.debug(`Downloaded to: ${downloadPath}`);
-        const extractDir = path.join(os.tmpdir(), `cos-extract-${Date.now()}`);
-        core.info(`Extracting archive...`);
-        const extractedPath = await tc.extractZip(downloadPath, extractDir);
-        core.debug(`Extracted to: ${extractedPath}`);
-        const binDir = extractedPath;
-        core.debug(`Binary directory: ${binDir}`);
         const platformArch = getPlatformArch();
-        core.info(`Caching tool...`);
-        const cachedPath = await tc.cacheDir(binDir, TOOL_NAME, resolvedVersion, platformArch);
-        core.debug(`Cached at: ${cachedPath}`);
+        let cachedPath = tc.find(TOOL_NAME, resolvedVersion, platformArch);
+        if (cachedPath) {
+            core.info(`Found ${TOOL_NAME} ${resolvedVersion} in tool cache at ${cachedPath}`);
+        }
+        else {
+            const assetName = getAssetName();
+            core.info(`Asset name: ${assetName}`);
+            const downloadUrl = getDownloadUrl(resolvedVersion, assetName);
+            core.info(`Download URL: ${downloadUrl}`);
+            core.info(`Downloading ${assetName}...`);
+            const downloadPath = await tc.downloadTool(downloadUrl);
+            core.debug(`Downloaded to: ${downloadPath}`);
+            const extractDir = path.join(os.tmpdir(), `cos-extract-${Date.now()}`);
+            core.info(`Extracting archive...`);
+            const extractedPath = await tc.extractZip(downloadPath, extractDir);
+            core.debug(`Extracted to: ${extractedPath}`);
+            const binDir = extractedPath;
+            core.debug(`Binary directory: ${binDir}`);
+            core.info(`Caching tool...`);
+            cachedPath = await tc.cacheDir(binDir, TOOL_NAME, resolvedVersion, platformArch);
+            core.debug(`Cached at: ${cachedPath}`);
+        }
         const cosBinaryPath = path.join(cachedPath, TOOL_NAME);
         fs.chmodSync(cosBinaryPath, 0o755);
         core.info(`Adding ${cachedPath} to PATH`);
