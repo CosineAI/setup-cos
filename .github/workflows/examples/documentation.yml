@@ -1,0 +1,40 @@
+# Documentation generation using the Cosine CLI.
+# Trigger manually to update docs. First runs in plan mode to preview changes, then in auto mode to apply them.
+name: Generate Documentation
+
+on:
+  workflow_dispatch:
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        # Full checkout is required so cos can read the codebase and suggest doc updates.
+
+      - name: Setup Cosine CLI
+        uses: cosineai/setup-cos@v1
+        with:
+          version: v0.1.0
+          # Pin to a specific CLI version for reproducible doc generation.
+
+      - name: Preview documentation changes (plan mode)
+        run: |
+          cos start \
+            --mode plan \
+            --origin=gh-actions \
+            --reasoning medium \
+            --prompt "Review the codebase and propose updates to README files, API documentation, and inline code comments."
+        env:
+          COS_API_KEY: ${{ secrets.COS_API_KEY }}
+
+      - name: Apply documentation changes (auto mode)
+        run: |
+          cos start \
+            --mode auto \
+            --origin=gh-actions \
+            --reasoning medium \
+            --prompt "Update README files, API documentation, and inline code comments to reflect the current codebase."
+        env:
+          COS_API_KEY: ${{ secrets.COS_API_KEY }}

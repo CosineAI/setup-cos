@@ -1,0 +1,33 @@
+# Automated PR review using the Cosine CLI.
+# Copy this workflow into your own repository under .github/workflows/ and adapt the prompt to your team's review guidelines.
+name: PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        # The Cosine CLI needs access to the codebase in order to review it.
+
+      - name: Setup Cosine CLI
+        uses: cosineai/setup-cos@v1
+
+      - name: Run automated code review
+        run: |
+          cos start \
+            --mode auto \
+            --origin=gh-actions \
+            --reasoning high \
+            --model "${{ vars.COS_MODEL }}" \
+            --prompt "Review this pull request for code quality, potential bugs, and best-practice violations. Provide concise, actionable feedback."
+        env:
+          COS_API_KEY: ${{ secrets.COS_API_KEY }}
+          # GITHUB_TOKEN is available automatically and used by cos to post review comments.

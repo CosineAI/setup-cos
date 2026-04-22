@@ -35,6 +35,17 @@ jobs:
           "${{ steps.setup-cos.outputs.path }}" version
 ```
 
+## Example Workflows
+
+Ready-to-use workflow templates are available in [`examples/`](examples/). Copy them into your repository under `.github/workflows/` and adapt the prompts and triggers to your needs.
+
+| Example | Trigger | Mode | Description |
+|---------|---------|------|-------------|
+| [PR Review](.github/workflows/examples/pr-review.yml) | `pull_request` | `auto` | Automated code review on every PR update. |
+| [Security Audit](.github/workflows/examples/security-audit.yml) | `push` to main/master | `auto` | Deep security audit with extra-high reasoning. |
+| [Documentation](.github/workflows/examples/documentation.yml) | `workflow_dispatch` | `plan` then `auto` | Preview and apply documentation updates. |
+| [Model Matrix](.github/workflows/examples/model-matrix.yml) | `workflow_dispatch` | `auto` | Run the same prompt across multiple models. |
+
 ### Inputs
 
 | Input     | Description                                                       | Required | Default  |

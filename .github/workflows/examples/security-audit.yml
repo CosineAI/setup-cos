@@ -1,0 +1,29 @@
+# Security audit using the Cosine CLI.
+# Run automatically on every push to the default branch or manually on demand.
+name: Security Audit
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Cosine CLI
+        uses: cosineai/setup-cos@v1
+
+      - name: Run security audit
+        run: |
+          cos start \
+            --mode auto \
+            --origin=gh-actions \
+            --reasoning xhigh \
+            --model gemini-3.1-pro \
+            --prompt "Audit this codebase for security vulnerabilities, insecure dependency usage, exposed secrets, and common misconfigurations. Summarize findings and suggest fixes."
+        env:
+          COS_API_KEY: ${{ secrets.COS_API_KEY }}

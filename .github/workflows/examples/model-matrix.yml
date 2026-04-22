@@ -1,0 +1,44 @@
+# Matrix strategy example: run the same prompt across multiple models.
+# Useful for comparing model outputs or ensuring robustness across different backends.
+name: Model Matrix
+
+on:
+  workflow_dispatch:
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        model:
+          - gemini-3.1-pro
+          - lumen-outpost
+          - sonnet-4.6
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Cosine CLI
+        uses: cosineai/setup-cos@v1
+
+      - name: Run with ${{ matrix.model }}
+        id: cos-run
+        run: |
+          cos start \
+            --mode auto \
+            --origin=gh-actions \
+            --reasoning high \
+            --model "${{ matrix.model }}" \
+            --prompt "Refactor the most complex function in this repo for readability and performance."
+        env:
+          COS_API_KEY: ${{ secrets.COS_API_KEY }}
+
+      - name: Upload output artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cos-output-${{ matrix.model }}
+          path: |
+            cos-output.md
+            cos-diff.patch
+        # Artifacts let you download and compare results from each model after the run finishes.
