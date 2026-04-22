@@ -1,6 +1,5 @@
 import * as core from "@actions/core";
 import * as tc from "@actions/tool-cache";
-import * as httpm from "@actions/http-client";
 import * as path from "path";
 import * as fs from "fs";
 import * as os from "os";
@@ -8,25 +7,6 @@ import * as os from "os";
 const GITHUB_OWNER = "CosineAI";
 const GITHUB_REPO = "cli2";
 const TOOL_NAME = "cos";
-
-export async function resolveLatestVersion(
-  apiBaseUrl: string,
-): Promise<string> {
-  const url = `${apiBaseUrl}/cli/latest?version=latest&os=linux&arch=amd64`;
-  const client = new httpm.HttpClient("setup-cos");
-  try {
-    const response = await client.getJson<{ latest: string }>(url);
-    if (response.result && response.result.latest) {
-      core.info(`Resolved latest version to ${response.result.latest}`);
-      return response.result.latest;
-    }
-  } catch (error) {
-    core.warning(
-      `Failed to resolve latest version from API: ${error instanceof Error ? error.message : String(error)}. Falling back to "latest".`,
-    );
-  }
-  return "latest";
-}
 
 function getAssetName(): string {
   const platform = process.platform;
@@ -55,37 +35,6 @@ function getAssetName(): string {
   throw new Error(`Unsupported platform/arch combination: ${platform}/${arch}`);
 }
 
-export function isNightly(version: string): boolean {
-  return version.toLowerCase().startsWith("nightly");
-}
-
-export async function resolveVersion(
-  version: string,
-  apiBaseUrl: string,
-): Promise<string> {
-  if (isNightly(version)) {
-    const nightlyTag = version.toLowerCase();
-    const resolveUrl = `${apiBaseUrl}/v1/cli/version?tag=${encodeURIComponent(nightlyTag)}`;
-
-    core.info(`Resolving nightly version from ${resolveUrl}`);
-
-    const client = new httpm.HttpClient("setup-cos");
-    try {
-      const response = await client.getJson<{ version: string }>(resolveUrl);
-      if (response.result && response.result.version) {
-        core.info(`Resolved nightly version to ${response.result.version}`);
-        return response.result.version;
-      }
-    } catch (error) {
-      core.warning(
-        `Failed to resolve nightly version "${version}" from API: ${error instanceof Error ? error.message : String(error)}. Falling back to "latest".`,
-      );
-    }
-    return "latest";
-  }
-  return version;
-}
-
 function getDownloadUrl(version: string, assetName: string): string {
   return `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${version}/${assetName}`;
 }
@@ -97,19 +46,10 @@ function getPlatformArch(): string {
 export async function run(): Promise<void> {
   try {
     const versionInput = core.getInput("version") || "latest";
-    const apiBaseUrl = core.getInput("api-base-url");
 
     core.debug(`Input version: ${versionInput}`);
-    core.debug(`Input api-base-url: ${apiBaseUrl}`);
 
-    let resolvedVersion: string;
-    if (versionInput === "latest") {
-      resolvedVersion = await resolveLatestVersion(apiBaseUrl);
-    } else if (isNightly(versionInput)) {
-      resolvedVersion = await resolveVersion(versionInput, apiBaseUrl);
-    } else {
-      resolvedVersion = versionInput;
-    }
+    const resolvedVersion = versionInput;
     core.info(`Resolved version: ${resolvedVersion}`);
 
     const platformArch = getPlatformArch();

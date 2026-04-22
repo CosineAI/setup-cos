@@ -28235,34 +28235,15 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.resolveLatestVersion = resolveLatestVersion;
-exports.isNightly = isNightly;
-exports.resolveVersion = resolveVersion;
 exports.run = run;
 const core = __importStar(__nccwpck_require__(7484));
 const tc = __importStar(__nccwpck_require__(3472));
-const httpm = __importStar(__nccwpck_require__(4844));
 const path = __importStar(__nccwpck_require__(6928));
 const fs = __importStar(__nccwpck_require__(9896));
 const os = __importStar(__nccwpck_require__(857));
 const GITHUB_OWNER = "CosineAI";
 const GITHUB_REPO = "cli2";
 const TOOL_NAME = "cos";
-async function resolveLatestVersion(apiBaseUrl) {
-    const url = `${apiBaseUrl}/cli/latest?version=latest&os=linux&arch=amd64`;
-    const client = new httpm.HttpClient("setup-cos");
-    try {
-        const response = await client.getJson(url);
-        if (response.result && response.result.latest) {
-            core.info(`Resolved latest version to ${response.result.latest}`);
-            return response.result.latest;
-        }
-    }
-    catch (error) {
-        core.warning(`Failed to resolve latest version from API: ${error instanceof Error ? error.message : String(error)}. Falling back to "latest".`);
-    }
-    return "latest";
-}
 function getAssetName() {
     const platform = process.platform;
     const arch = process.arch;
@@ -28281,29 +28262,6 @@ function getAssetName() {
     }
     throw new Error(`Unsupported platform/arch combination: ${platform}/${arch}`);
 }
-function isNightly(version) {
-    return version.toLowerCase().startsWith("nightly");
-}
-async function resolveVersion(version, apiBaseUrl) {
-    if (isNightly(version)) {
-        const nightlyTag = version.toLowerCase();
-        const resolveUrl = `${apiBaseUrl}/v1/cli/version?tag=${encodeURIComponent(nightlyTag)}`;
-        core.info(`Resolving nightly version from ${resolveUrl}`);
-        const client = new httpm.HttpClient("setup-cos");
-        try {
-            const response = await client.getJson(resolveUrl);
-            if (response.result && response.result.version) {
-                core.info(`Resolved nightly version to ${response.result.version}`);
-                return response.result.version;
-            }
-        }
-        catch (error) {
-            core.warning(`Failed to resolve nightly version "${version}" from API: ${error instanceof Error ? error.message : String(error)}. Falling back to "latest".`);
-        }
-        return "latest";
-    }
-    return version;
-}
 function getDownloadUrl(version, assetName) {
     return `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${version}/${assetName}`;
 }
@@ -28313,19 +28271,8 @@ function getPlatformArch() {
 async function run() {
     try {
         const versionInput = core.getInput("version") || "latest";
-        const apiBaseUrl = core.getInput("api-base-url");
         core.debug(`Input version: ${versionInput}`);
-        core.debug(`Input api-base-url: ${apiBaseUrl}`);
-        let resolvedVersion;
-        if (versionInput === "latest") {
-            resolvedVersion = await resolveLatestVersion(apiBaseUrl);
-        }
-        else if (isNightly(versionInput)) {
-            resolvedVersion = await resolveVersion(versionInput, apiBaseUrl);
-        }
-        else {
-            resolvedVersion = versionInput;
-        }
+        const resolvedVersion = versionInput;
         core.info(`Resolved version: ${resolvedVersion}`);
         const platformArch = getPlatformArch();
         let cachedPath = tc.find(TOOL_NAME, resolvedVersion, platformArch);
