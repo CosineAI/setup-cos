@@ -36413,6 +36413,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = run;
 const core = __importStar(__nccwpck_require__(7484));
 const tc = __importStar(__nccwpck_require__(3472));
+const exec = __importStar(__nccwpck_require__(5236));
 const path = __importStar(__nccwpck_require__(6928));
 const fs = __importStar(__nccwpck_require__(9896));
 const os = __importStar(__nccwpck_require__(857));
@@ -36447,6 +36448,49 @@ function getDownloadUrl(version, assetName) {
 function getPlatformArch() {
     return `${process.platform}-${process.arch}`;
 }
+async function maybeRunCos(cosBinaryPath) {
+    const mode = core.getInput("mode");
+    if (!mode) {
+        return;
+    }
+    const prompt = core.getInput("prompt");
+    if (!prompt) {
+        core.setFailed("'prompt' input is required when 'mode' is set");
+        return;
+    }
+    const args = ["start", "--mode", mode, "--prompt", prompt];
+    const reasoning = core.getInput("reasoning");
+    if (reasoning) {
+        args.push("--reasoning", reasoning);
+    }
+    const model = core.getInput("model");
+    if (model) {
+        args.push("--model", model);
+    }
+    const cwd = core.getInput("cwd");
+    if (cwd) {
+        args.push("--cwd", cwd);
+    }
+    const origin = core.getInput("origin");
+    if (origin) {
+        args.push("--origin", origin);
+    }
+    if (core.getBooleanInput("auto-accept")) {
+        args.push("--auto-accept");
+    }
+    if (core.getBooleanInput("disable-discovery")) {
+        args.push("--disable-discovery");
+    }
+    if (core.getBooleanInput("disable-intermediate-updates")) {
+        args.push("--disable-intermediate-updates");
+    }
+    core.info(`Running: ${cosBinaryPath} ${args.join(" ")}`);
+    const execOptions = {};
+    if (cwd) {
+        execOptions.cwd = cwd;
+    }
+    await exec.exec(cosBinaryPath, args, execOptions);
+}
 async function run() {
     try {
         const versionInput = core.getInput("version") || "latest";
@@ -36466,6 +36510,7 @@ async function run() {
             core.addPath(extractedPath);
             core.setOutput("version", resolvedVersion);
             core.setOutput("path", cosBinaryPath);
+            await maybeRunCos(cosBinaryPath);
             core.info("Setup Cosine CLI completed successfully.");
             return;
         }
@@ -36498,6 +36543,7 @@ async function run() {
         core.info(`Cosine CLI installed at: ${cosBinaryPath}`);
         core.setOutput("version", resolvedVersion);
         core.setOutput("path", cosBinaryPath);
+        await maybeRunCos(cosBinaryPath);
         core.info("Setup Cosine CLI completed successfully.");
     }
     catch (error) {

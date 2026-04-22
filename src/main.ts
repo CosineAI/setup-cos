@@ -1,5 +1,6 @@
 import * as core from "@actions/core";
 import * as tc from "@actions/tool-cache";
+import * as exec from "@actions/exec";
 import * as path from "path";
 import * as fs from "fs";
 import * as os from "os";
@@ -48,6 +49,62 @@ function getPlatformArch(): string {
   return `${process.platform}-${process.arch}`;
 }
 
+async function maybeRunCos(cosBinaryPath: string): Promise<void> {
+  const mode = core.getInput("mode");
+  if (!mode) {
+    return;
+  }
+
+  const prompt = core.getInput("prompt");
+  if (!prompt) {
+    core.setFailed("'prompt' input is required when 'mode' is set");
+    return;
+  }
+
+  const args = ["start", "--mode", mode, "--prompt", prompt];
+
+  const reasoning = core.getInput("reasoning");
+  if (reasoning) {
+    args.push("--reasoning", reasoning);
+  }
+
+  const model = core.getInput("model");
+  if (model) {
+    args.push("--model", model);
+  }
+
+  const cwd = core.getInput("cwd");
+  if (cwd) {
+    args.push("--cwd", cwd);
+  }
+
+  const origin = core.getInput("origin");
+  if (origin) {
+    args.push("--origin", origin);
+  }
+
+  if (core.getBooleanInput("auto-accept")) {
+    args.push("--auto-accept");
+  }
+
+  if (core.getBooleanInput("disable-discovery")) {
+    args.push("--disable-discovery");
+  }
+
+  if (core.getBooleanInput("disable-intermediate-updates")) {
+    args.push("--disable-intermediate-updates");
+  }
+
+  core.info(`Running: ${cosBinaryPath} ${args.join(" ")}`);
+
+  const execOptions: exec.ExecOptions = {};
+  if (cwd) {
+    execOptions.cwd = cwd;
+  }
+
+  await exec.exec(cosBinaryPath, args, execOptions);
+}
+
 export async function run(): Promise<void> {
   try {
     const versionInput = core.getInput("version") || "latest";
@@ -73,6 +130,7 @@ export async function run(): Promise<void> {
       core.addPath(extractedPath);
       core.setOutput("version", resolvedVersion);
       core.setOutput("path", cosBinaryPath);
+      await maybeRunCos(cosBinaryPath);
       core.info("Setup Cosine CLI completed successfully.");
       return;
     }
@@ -122,6 +180,7 @@ export async function run(): Promise<void> {
 
     core.setOutput("version", resolvedVersion);
     core.setOutput("path", cosBinaryPath);
+    await maybeRunCos(cosBinaryPath);
 
     core.info("Setup Cosine CLI completed successfully.");
   } catch (error) {

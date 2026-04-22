@@ -35,6 +35,35 @@ jobs:
           "${{ steps.setup-cos.outputs.path }}" version
 ```
 
+### One-step install + run
+
+You can combine installation and execution into a single step by providing a `mode` and `prompt`:
+
+```yaml
+name: Cosine Auto Run
+on: [push]
+
+jobs:
+  example:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Cosine CLI (install only)
+        uses: cosineai/setup-cos@v1
+        with:
+          version: latest
+
+      - name: Setup Cosine CLI (install + auto run)
+        uses: cosineai/setup-cos@v1
+        with:
+          version: latest
+          mode: auto
+          prompt: "Review this PR for bugs and style issues"
+          reasoning: high
+```
+
 ## Example Workflows
 
 Ready-to-use workflow templates are available in [`examples/`](examples/). Copy them into your repository under `.github/workflows/` and adapt the prompts and triggers to your needs.
@@ -48,9 +77,18 @@ Ready-to-use workflow templates are available in [`examples/`](examples/). Copy 
 
 ### Inputs
 
-| Input     | Description                                                       | Required | Default  |
-| --------- | ----------------------------------------------------------------- | -------- | -------- |
-| `version` | Version to install. Use `latest` or a specific tag like `v0.1.0`. | No       | `latest` |
+| Input                          | Description                                                                 | Required | Default                        |
+| ------------------------------ | --------------------------------------------------------------------------- | -------- | ------------------------------ |
+| `version`                      | Version to install. Use `latest` or a specific tag like `v0.1.0`.           | No       | `latest`                       |
+| `mode`                         | Operating mode: `auto`, `plan`, `manual`, `swarm`. If set, the action runs `cos start --mode <mode>` after installation. | No       |                                |
+| `prompt`                       | Prompt text to pass to `cos` via `--prompt`. Required when `mode` is set.   | No       |                                |
+| `reasoning`                    | Reasoning depth: `none`, `low`, `medium`, `high`, `xhigh`, `adaptive`. Passed as `--reasoning`. | No       |                                |
+| `model`                        | Model label (e.g. `gemini-3.1-pro`, `sonnet-4.6`). Passed as `--model`.     | No       |                                |
+| `cwd`                          | Working directory for the `cos` run.                                        | No       | `${{ github.workspace }}`      |
+| `auto-accept`                  | Automatically accept all changes without prompting.                         | No       | `false`                        |
+| `disable-discovery`            | Disable automatic discovery of project context.                             | No       | `false`                        |
+| `disable-intermediate-updates` | Disable intermediate progress updates.                                        | No       | `false`                        |
+| `origin`                       | Origin identifier passed as `--origin`.                                     | No       | `gh-actions`                   |
 
 ### Outputs
 

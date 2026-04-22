@@ -9,6 +9,38 @@ inputs:
     description: 'Version of the Cosine CLI to install. Use "latest" (default) for the latest release, or a specific version like "v0.1.0".'
     required: false
     default: 'latest'
+  mode:
+    description: 'Operating mode: auto, plan, manual, swarm. If set, runs cos start --mode <mode> after installation.'
+    required: false
+  prompt:
+    description: 'Prompt text to pass to cos via --prompt. Required if mode is set.'
+    required: false
+  reasoning:
+    description: 'Reasoning depth: none, low, medium, high, xhigh, adaptive. Passed as --reasoning.'
+    required: false
+  model:
+    description: 'Model label (e.g. gemini-3.1-pro, sonnet-4.6). Passed as --model.'
+    required: false
+  cwd:
+    description: 'Working directory for the cos run.'
+    required: false
+    default: '${{ github.workspace }}'
+  auto-accept:
+    description: 'Pass --auto-accept if true.'
+    required: false
+    default: 'false'
+  disable-discovery:
+    description: 'Pass --disable-discovery if true.'
+    required: false
+    default: 'false'
+  disable-intermediate-updates:
+    description: 'Pass --disable-intermediate-updates if true.'
+    required: false
+    default: 'false'
+  origin:
+    description: 'Passed as --origin.'
+    required: false
+    default: 'gh-actions'
 
 outputs:
   version:
