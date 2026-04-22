@@ -136,28 +136,28 @@ describe("resolveLatestVersion", () => {
     mockGetJson.mockClear();
   });
 
-  it("resolves latest version from GitHub API", async () => {
+  it("resolves latest version from API", async () => {
     mockGetJson.mockResolvedValue({
-      result: { tag_name: "v1.0.0" },
+      result: { latest: "v1.0.0" },
       statusCode: 200,
     });
 
-    const result = await resolveLatestVersion();
+    const result = await resolveLatestVersion("https://api.cosine.sh");
 
     expect(result).toBe("v1.0.0");
     expect(mockGetJson).toHaveBeenCalledWith(
-      "https://api.github.com/repos/CosineAI/cli2/releases/latest",
+      "https://api.cosine.sh/cli/latest?version=latest&os=linux&arch=amd64",
     );
   });
 
   it("falls back to latest when API request fails", async () => {
     mockGetJson.mockRejectedValue(new Error("Network timeout"));
 
-    const result = await resolveLatestVersion();
+    const result = await resolveLatestVersion("https://api.cosine.sh");
 
     expect(result).toBe("latest");
     expect(mockGetJson).toHaveBeenCalledWith(
-      "https://api.github.com/repos/CosineAI/cli2/releases/latest",
+      "https://api.cosine.sh/cli/latest?version=latest&os=linux&arch=amd64",
     );
   });
 
@@ -167,7 +167,7 @@ describe("resolveLatestVersion", () => {
       statusCode: 200,
     });
 
-    const result = await resolveLatestVersion();
+    const result = await resolveLatestVersion("https://api.cosine.sh");
 
     expect(result).toBe("latest");
   });
@@ -176,6 +176,7 @@ describe("resolveLatestVersion", () => {
 // Import run separately to avoid hoisting issues with the mocks
 // We'll import it here and test it with mocks already in place
 describe("run - cache behavior", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const core = require("@actions/core");
 
   beforeEach(() => {
@@ -192,7 +193,7 @@ describe("run - cache behavior", () => {
 
   it("calls tc.find with resolved tag when version is latest and cache hits", async () => {
     mockGetJson.mockResolvedValue({
-      result: { tag_name: "v1.2.3" },
+      result: { latest: "v1.2.3" },
       statusCode: 200,
     });
     mockFind.mockReturnValue("/cached/path");
@@ -209,7 +210,7 @@ describe("run - cache behavior", () => {
 
   it("calls tc.find with resolved tag when version is latest and cache misses", async () => {
     mockGetJson.mockResolvedValue({
-      result: { tag_name: "v1.2.3" },
+      result: { latest: "v1.2.3" },
       statusCode: 200,
     });
     mockFind.mockReturnValue("");

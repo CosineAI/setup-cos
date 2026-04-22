@@ -9,18 +9,20 @@ const GITHUB_OWNER = "CosineAI";
 const GITHUB_REPO = "cli2";
 const TOOL_NAME = "cos";
 
-export async function resolveLatestVersion(): Promise<string> {
-  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
+export async function resolveLatestVersion(
+  apiBaseUrl: string,
+): Promise<string> {
+  const url = `${apiBaseUrl}/cli/latest?version=latest&os=linux&arch=amd64`;
   const client = new httpm.HttpClient("setup-cos");
   try {
-    const response = await client.getJson<{ tag_name: string }>(url);
-    if (response.result && response.result.tag_name) {
-      core.info(`Resolved latest version to ${response.result.tag_name}`);
-      return response.result.tag_name;
+    const response = await client.getJson<{ latest: string }>(url);
+    if (response.result && response.result.latest) {
+      core.info(`Resolved latest version to ${response.result.latest}`);
+      return response.result.latest;
     }
   } catch (error) {
     core.warning(
-      `Failed to resolve latest version from GitHub API: ${error instanceof Error ? error.message : String(error)}. Falling back to "latest".`,
+      `Failed to resolve latest version from API: ${error instanceof Error ? error.message : String(error)}. Falling back to "latest".`,
     );
   }
   return "latest";
@@ -102,7 +104,7 @@ export async function run(): Promise<void> {
 
     let resolvedVersion: string;
     if (versionInput === "latest") {
-      resolvedVersion = await resolveLatestVersion();
+      resolvedVersion = await resolveLatestVersion(apiBaseUrl);
     } else if (isNightly(versionInput)) {
       resolvedVersion = await resolveVersion(versionInput, apiBaseUrl);
     } else {
